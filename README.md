@@ -1,6 +1,24 @@
-# Real-time Object Detection with Mask R-CNN
+# Real-time Object Detection with Edge Derivatives
 
-This project implements real-time object detection using Mask R-CNN with your webcam. It uses PyTorch and OpenCV to perform instance segmentation and object detection in real-time.
+This project explores the mathematical foundations of edge derivatives and their application to real-time object detection. It includes both a comprehensive mathematical paper and a practical implementation using PyTorch and OpenCV for instance segmentation and object detection in real-time.
+
+## Project Components
+
+### Mathematical Paper
+- **LaTeX Source**: `edge_derivatives_paper.tex` - A comprehensive mathematical paper titled "Applying Edge Derivatives to Real-Time Object Detection"
+- **PDF Document**: `edge_derivatives_paper.pdf` - The compiled PDF version of the mathematical paper
+- **Sobel Example**: `sobel_edge_detection_example.png` - Visual demonstration of Sobel edge detection
+
+The paper covers:
+- Mathematical foundations of image derivatives and edge detection
+- Sobel operators and gradient computation
+- Laplacian operators for second-derivative edge detection
+- OpenCV implementations and practical code examples
+- Integration of edge detection with real-time object detection pipelines
+
+### Implementation
+- **Python Script**: `realtime_object_detection.py` - Real-time object detection implementation
+- **Model**: `yolov8n-seg.pt` - YOLOv8 segmentation model weights
 
 ## Requirements
 
@@ -22,11 +40,29 @@ source venv/bin/activate  # On macOS/Linux
 pip install -r requirements.txt
 ```
 
+## Viewing the Mathematical Paper
+
+### PDF Version
+Simply open `edge_derivatives_paper.pdf` in any PDF viewer to read the complete mathematical paper.
+
+### LaTeX Source
+To compile the LaTeX source yourself:
+```bash
+pdflatex edge_derivatives_paper.tex
+```
+
+The paper includes:
+- Mathematical derivations of edge detection algorithms
+- Visual examples with the included `sobel_edge_detection_example.png`
+- Complete OpenCV code implementations
+- References to relevant academic sources
+
 ## Usage
 
+### Real-time Object Detection
 1. Run the script:
 ```bash
-python real_time_detection.py
+python realtime_object_detection.py
 ```
 
 2. The program will:
@@ -36,6 +72,17 @@ python real_time_detection.py
    - Display FPS (Frames Per Second) in the top-left corner
 
 3. Press 'q' to quit the program.
+
+## Mathematical Concepts Covered
+
+The paper explores several key mathematical concepts:
+
+- **Image Gradients**: First partial derivatives ∂I/∂x and ∂I/∂y
+- **Gradient Magnitude**: ||∇I|| = √((∂I/∂x)² + (∂I/∂y)²)
+- **Sobel Operators**: Discrete convolution kernels for gradient approximation
+- **Laplacian Operator**: ∇²I = ∂²I/∂x² + ∂²I/∂y² for second-derivative edge detection
+- **Edge Detection Pipelines**: From raw images to binary masks and contours
+- **OpenCV Integration**: Practical implementation of mathematical concepts
 
 ## Features
 
