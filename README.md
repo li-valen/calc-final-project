@@ -43,7 +43,7 @@ pip install -r requirements.txt
 ## Viewing the Mathematical Paper
 
 ### PDF Version
-Simply open `edge_derivatives_paper.pdf` in any PDF viewer to read the complete mathematical paper.
+Simply open [edge_derivatives_paper.pdf](./edge_derivatives_paper.pdf) in any PDF viewer to read the complete mathematical paper.
 
 ### LaTeX Source
 To compile the LaTeX source yourself:
