@@ -17,7 +17,8 @@ The paper covers:
 - Integration of edge detection with real-time object detection pipelines
 
 ### Implementation
-- **Python Script**: `realtime_object_detection.py` - Real-time object detection implementation
+- **Original Script**: `realtime_object_detection.py` - Real-time object detection implementation
+- **Hybrid Script**: `hybrid_edge_yolo_detection.py` - Edge-enhanced YOLOv8 detection with mathematical integration
 - **Model**: `yolov8n-seg.pt` - YOLOv8 segmentation model weights
 
 ## Requirements
@@ -59,8 +60,8 @@ The paper includes:
 
 ## Usage
 
-### Real-time Object Detection
-1. Run the script:
+### Real-time Object Detection (Original)
+1. Run the original script:
 ```bash
 python realtime_object_detection.py
 ```
@@ -72,6 +73,25 @@ python realtime_object_detection.py
    - Display FPS (Frames Per Second) in the top-left corner
 
 3. Press 'q' to quit the program.
+
+### Hybrid Edge-YOLOv8 Detection (New)
+1. Run the hybrid script:
+```bash
+python hybrid_edge_yolo_detection.py
+```
+
+2. The program will open three windows:
+   - **Original YOLOv8**: Standard YOLOv8 detections with bounding boxes and masks
+   - **Edge Detection**: Canny edge map showing detected edges
+   - **Edge-Refined Detection**: Enhanced detections using edge information
+
+3. Features:
+   - Real-time edge detection using Canny algorithm
+   - Boundary refinement combining YOLOv8 masks with edge contours
+   - FPS counter on all windows
+   - Mathematical integration of edge derivatives from the paper
+
+4. Press 'q' to quit the program.
 
 ## Mathematical Concepts Covered
 
@@ -86,6 +106,7 @@ The paper explores several key mathematical concepts:
 
 ## Features
 
+### Original Implementation (`realtime_object_detection.py`)
 - Real-time object detection and instance segmentation
 - Displays bounding boxes around detected objects
 - Shows object labels and confidence scores
@@ -93,8 +114,39 @@ The paper explores several key mathematical concepts:
 - FPS counter
 - Supports all COCO dataset classes
 
+### Hybrid Edge-YOLOv8 Implementation (`hybrid_edge_yolo_detection.py`)
+- **Edge-Enhanced Detection**: Combines YOLOv8 with Canny edge detection for refined object boundaries
+- **Multiple Visualization Windows**: 
+  - Original YOLOv8 detections
+  - Canny edge map visualization
+  - Edge-refined detection results
+- **Mathematical Integration**: Implements edge derivative techniques from the paper
+- **Real-time Performance**: Optimized threading architecture maintains high FPS
+- **Boundary Refinement**: Uses edge contours to enhance YOLOv8 mask accuracy
+
+## Mathematical Integration
+
+The hybrid implementation bridges the gap between traditional computer vision (your paper) and modern deep learning (YOLOv8):
+
+### Edge Derivative Techniques Applied
+- **Gaussian Blur Preprocessing**: Reduces noise before edge detection (as described in the paper)
+- **Canny Edge Detection**: Implements `cv2.Canny(gray, 100, 200)` for binary edge maps
+- **Contour Extraction**: Uses `cv2.findContours()` to extract object boundaries from edge maps
+- **Boundary Refinement**: Combines YOLOv8 masks with edge contours for enhanced accuracy
+
+### Technical Implementation
+The hybrid approach works by:
+1. Running YOLOv8 detection on each frame
+2. Applying Canny edge detection with Gaussian preprocessing
+3. Finding contours within each detected object's bounding box
+4. Refining YOLOv8 masks by intersecting with strong edge regions
+5. Displaying both original and refined results for comparison
+
+This demonstrates how traditional edge derivative mathematics can enhance modern deep learning approaches.
+
 ## Notes
 
 - The model runs on CPU by default. If you have a CUDA-capable GPU, it will automatically use it.
 - The confidence threshold is set to 0.5 by default. You can modify this in the code to adjust detection sensitivity.
-- Performance may vary depending on your hardware specifications. 
+- Performance may vary depending on your hardware specifications.
+- The hybrid approach adds minimal computational overhead while providing enhanced boundary detection. 

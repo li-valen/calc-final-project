@@ -1,6 +1,18 @@
+# Core dependencies for YOLOv8 object detection
 torch>=2.0.0
 torchvision>=0.15.0
+ultralytics>=8.0.0
+
+# Computer vision and image processing
 opencv-python>=4.8.0
 numpy>=1.24.0
 Pillow>=10.0.0
-ultralytics>=8.0.0 
+
+# Additional dependencies for edge detection and hybrid implementation
+scipy>=1.10.0
+matplotlib>=3.7.0
+
+# Optional: For enhanced performance (if available)
+# CUDA support (uncomment if you have NVIDIA GPU)
+# torch-audio>=2.0.0
+# torchaudio>=2.0.0 
