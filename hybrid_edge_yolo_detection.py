@@ -2,13 +2,31 @@ import cv2
 import numpy as np
 import time
 from ultralytics import YOLO
+from ultralytics import solutions
 from threading import Thread, Lock
 import queue
 
 class HybridEdgeYOLO:
     def __init__(self):
-        # Load YOLOv8 model
-        self.model = YOLO('yolov8n-seg.pt')  # Using nano model for maximum speed
+        # Load YOLOv11 model
+        self.model = YOLO('yolo11n-seg.pt')  # Using nano model for maximum speed
+        
+        # Initialize Speed Estimator
+        self.speed_estimator = solutions.SpeedEstimator(
+            model='yolo11n-seg.pt',
+            fps=30.0,
+            max_hist=5,
+            meter_per_pixel=0.05,  # Adjust based on camera setup
+            max_speed=120,  # km/h
+            tracker='botsort.yaml',
+            conf=0.3,
+            iou=0.5,
+            classes=[2, 3, 5, 7],  # Focus on vehicles: car, motorcycle, bus, truck
+            verbose=True,
+            show=False,  # We'll handle our own display
+            show_conf=True,
+            show_labels=True
+        )
         
         # COCO classes
         self.COCO_CLASSES = [
@@ -28,12 +46,17 @@ class HybridEdgeYOLO:
         self.frame_queue = queue.Queue(maxsize=1)
         self.result_queue = queue.Queue(maxsize=1)
         self.latest_result = None
+        self.latest_speed_result = None
         self.lock = Lock()
         
         # Edge detection parameters
         self.canny_low = 100
         self.canny_high = 200
         self.gaussian_kernel = (3, 3)
+        
+        # Speed tracking parameters
+        self.speed_enabled = True
+        self.calibration_mode = False
         
     def preprocess_frame(self, frame):
         """Minimal preprocessing for maximum speed"""
@@ -117,7 +140,7 @@ class HybridEdgeYOLO:
                 if frame is None:
                     break
                 
-                # Run inference
+                # Run YOLOv11 inference
                 results = self.model(frame, conf=0.5, verbose=False)[0]
                 
                 # Process results
@@ -129,8 +152,17 @@ class HybridEdgeYOLO:
                                                   results.boxes.conf.cpu().numpy()):
                         processed_results.append((box, mask, int(cls), conf))
                 
+                # Run speed estimation if enabled
+                speed_result = None
+                if self.speed_enabled:
+                    try:
+                        speed_result = self.speed_estimator(frame)
+                    except Exception as e:
+                        print(f"Speed estimation error: {e}")
+                
                 with self.lock:
                     self.latest_result = processed_results
+                    self.latest_speed_result = speed_result
                 
                 # Clear queue to prevent lag
                 while not self.frame_queue.empty():
@@ -142,7 +174,7 @@ class HybridEdgeYOLO:
             except queue.Empty:
                 continue
     
-    def draw_results(self, frame, results, edges=None, refined_results=None):
+    def draw_results(self, frame, results, edges=None, refined_results=None, speed_result=None):
         """Draw detection results on frame with different visualization modes"""
         if not results:
             return frame, frame, frame
@@ -187,6 +219,52 @@ class HybridEdgeYOLO:
                 cv2.rectangle(refined_frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
                 cv2.putText(refined_frame, f"{label} (refined)", (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
         
+        # Overlay speed information if available
+        if speed_result is not None and hasattr(speed_result, 'plot_im'):
+            # Use the speed estimator's visualization
+            speed_frame = speed_result.plot_im.copy()
+            # Resize to match our frame size
+            speed_frame = cv2.resize(speed_frame, (w, h), interpolation=cv2.INTER_LINEAR)
+            
+            # Overlay speed information on original frame
+            if hasattr(speed_result, 'boxes') and speed_result.boxes is not None:
+                # Extract speed information from tracking data
+                if hasattr(speed_result.boxes, 'speed') and speed_result.boxes.speed is not None:
+                    speeds = speed_result.boxes.speed.cpu().numpy()
+                    if len(speeds) > 0:
+                        avg_speed = np.mean(speeds)
+                        speed_text = f"Avg Speed: {avg_speed:.1f} km/h"
+                        cv2.putText(original_frame, speed_text, (10, h-20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                
+                # Add individual speed labels for each tracked vehicle
+                if hasattr(speed_result.boxes, 'xyxy') and speed_result.boxes.xyxy is not None:
+                    boxes = speed_result.boxes.xyxy.cpu().numpy()
+                    if hasattr(speed_result.boxes, 'speed') and speed_result.boxes.speed is not None:
+                        speeds = speed_result.boxes.speed.cpu().numpy()
+                        track_ids = speed_result.boxes.id.cpu().numpy() if hasattr(speed_result.boxes, 'id') else None
+                        
+                        for i, (box, speed) in enumerate(zip(boxes, speeds)):
+                            x1, y1, x2, y2 = map(int, box)
+                            # Scale coordinates to match our frame size
+                            x1, y1, x2, y2 = map(int, [x1 * scale_x, y1 * scale_y, x2 * scale_x, y2 * scale_y])
+                            
+                            # Draw speed label above bounding box
+                            speed_label = f"ID:{int(track_ids[i]) if track_ids is not None else i} {speed:.1f}km/h"
+                            cv2.putText(original_frame, speed_label, (x1, y1-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+                            
+                            # Draw colored bounding box based on speed
+                            color = (0, 255, 0) if speed < 50 else (0, 255, 255) if speed < 80 else (0, 0, 255)  # Green/Yellow/Red
+                            cv2.rectangle(original_frame, (x1, y1), (x2, y2), color, 2)
+            
+            # Also overlay on refined frame
+            if hasattr(speed_result, 'boxes') and speed_result.boxes is not None:
+                if hasattr(speed_result.boxes, 'speed') and speed_result.boxes.speed is not None:
+                    speeds = speed_result.boxes.speed.cpu().numpy()
+                    if len(speeds) > 0:
+                        avg_speed = np.mean(speeds)
+                        speed_text = f"Avg Speed: {avg_speed:.1f} km/h"
+                        cv2.putText(refined_frame, speed_text, (10, h-20), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        
         return original_frame, edge_frame, refined_frame
     
     def run(self):
@@ -207,8 +285,9 @@ class HybridEdgeYOLO:
         inference_thread = Thread(target=self.inference_thread, daemon=True)
         inference_thread.start()
         
-        print("Hybrid Edge-YOLOv8 Detection (Press 'q' to quit)")
-        print("Windows: Original | Edges | Refined")
+        print("Hybrid Edge-YOLOv11 Detection with Speed Estimation (Press 'q' to quit)")
+        print("Windows: Original+Speed | Edges | Refined | Speed Only")
+        print("Controls: 's' to toggle speed estimation, 'c' for calibration mode")
         
         frame_count = 0
         start_time = time.time()
@@ -233,6 +312,7 @@ class HybridEdgeYOLO:
             # Get latest results
             with self.lock:
                 current_result = self.latest_result
+                current_speed_result = self.latest_speed_result
             
             # Apply edge detection
             edges, gray = self.apply_edge_detection(frame)
@@ -248,14 +328,14 @@ class HybridEdgeYOLO:
             # Draw results on different frames
             if current_result:
                 original_frame, edge_frame, refined_frame = self.draw_results(
-                    frame, current_result, edges, refined_results
+                    frame, current_result, edges, refined_results, current_speed_result
                 )
             else:
                 original_frame = frame.copy()
                 edge_frame = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
                 refined_frame = frame.copy()
             
-            # Display FPS
+            # Display FPS and status
             if frame_count % 30 == 0:
                 fps = 30 / (time.time() - start_time)
                 start_time = time.time()
@@ -264,13 +344,43 @@ class HybridEdgeYOLO:
                 cv2.putText(edge_frame, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 cv2.putText(refined_frame, fps_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
             
+            # Add status indicators
+            status_text = f"Speed: {'ON' if self.speed_enabled else 'OFF'}"
+            cv2.putText(original_frame, status_text, (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0) if self.speed_enabled else (0, 0, 255), 2)
+            
+            # Add speed legend
+            if self.speed_enabled:
+                legend_y = 90
+                cv2.putText(original_frame, "Speed Legend:", (10, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                cv2.putText(original_frame, "Green: <50 km/h", (10, legend_y+20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0), 1)
+                cv2.putText(original_frame, "Yellow: 50-80 km/h", (10, legend_y+40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 255), 1)
+                cv2.putText(original_frame, "Red: >80 km/h", (10, legend_y+60), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1)
+            
+            # Create speed-only visualization window
+            speed_only_frame = frame.copy()
+            if current_speed_result is not None and hasattr(current_speed_result, 'plot_im'):
+                speed_only_frame = current_speed_result.plot_im.copy()
+                h, w = frame.shape[:2]
+                speed_only_frame = cv2.resize(speed_only_frame, (w, h), interpolation=cv2.INTER_LINEAR)
+            
             # Display multiple windows
-            cv2.imshow('Original YOLOv8', original_frame)
+            cv2.imshow('Original YOLOv11 + Speed', original_frame)
             cv2.imshow('Edge Detection', edge_frame)
             cv2.imshow('Edge-Refined Detection', refined_frame)
+            cv2.imshow('Speed Estimation Only', speed_only_frame)
             
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            # Handle keyboard input
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
                 break
+            elif key == ord('s'):
+                self.speed_enabled = not self.speed_enabled
+                print(f"Speed estimation {'enabled' if self.speed_enabled else 'disabled'}")
+            elif key == ord('c'):
+                self.calibration_mode = not self.calibration_mode
+                print(f"Calibration mode {'enabled' if self.calibration_mode else 'disabled'}")
+                if self.calibration_mode:
+                    print("Click on a known object to calibrate meter_per_pixel ratio")
         
         # Cleanup
         self.frame_queue.put(None)

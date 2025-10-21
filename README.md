@@ -1,6 +1,6 @@
 # Real-time Object Detection with Edge Derivatives
 
-This project explores the mathematical foundations of edge derivatives and their application to real-time object detection. It includes both a comprehensive mathematical paper and a practical implementation using PyTorch and OpenCV for instance segmentation and object detection in real-time.
+This project explores the mathematical foundations of edge derivatives and their application to real-time object detection. It includes both a comprehensive mathematical paper and a practical implementation using PyTorch and OpenCV for instance segmentation and object detection in real-time with YOLOv11.
 
 ## Project Components
 
@@ -18,8 +18,8 @@ The paper covers:
 
 ### Implementation
 - **Original Script**: `realtime_object_detection.py` - Real-time object detection implementation
-- **Hybrid Script**: `hybrid_edge_yolo_detection.py` - Edge-enhanced YOLOv8 detection with mathematical integration
-- **Model**: `yolov8n-seg.pt` - YOLOv8 segmentation model weights
+- **Hybrid Script**: `hybrid_edge_yolo_detection.py` - Edge-enhanced YOLOv11 detection with mathematical integration
+- **Model**: `yolo11n-seg.pt` - YOLOv11 segmentation model weights
 
 ## Requirements
 
@@ -81,17 +81,25 @@ python hybrid_edge_yolo_detection.py
 ```
 
 2. The program will open three windows:
-   - **Original YOLOv8**: Standard YOLOv8 detections with bounding boxes and masks
+   - **Original YOLOv11 + Speed**: Standard YOLOv11 detections with real-time speed estimation
    - **Edge Detection**: Canny edge map showing detected edges
    - **Edge-Refined Detection**: Enhanced detections using edge information
 
 3. Features:
    - Real-time edge detection using Canny algorithm
-   - Boundary refinement combining YOLOv8 masks with edge contours
+   - Boundary refinement combining YOLOv11 masks with edge contours
+   - Real-time speed estimation for vehicles (cars, motorcycles, buses, trucks)
    - FPS counter on all windows
    - Mathematical integration of edge derivatives from the paper
+   - Interactive controls: 's' to toggle speed estimation, 'c' for calibration mode
 
-4. Press 'q' to quit the program.
+4. Speed Estimation Controls:
+   - **'s' key**: Toggle speed estimation on/off
+   - **'c' key**: Enter calibration mode for meter_per_pixel adjustment
+   - **Speed display**: Shows average vehicle speeds in km/h
+   - **Vehicle tracking**: Focuses on vehicles (classes 2,3,5,7) for accurate speed measurement
+
+5. Press 'q' to quit the program.
 
 ## Mathematical Concepts Covered
 
@@ -114,35 +122,38 @@ The paper explores several key mathematical concepts:
 - FPS counter
 - Supports all COCO dataset classes
 
-### Hybrid Edge-YOLOv8 Implementation (`hybrid_edge_yolo_detection.py`)
-- **Edge-Enhanced Detection**: Combines YOLOv8 with Canny edge detection for refined object boundaries
+### Hybrid Edge-YOLOv11 Implementation (`hybrid_edge_yolo_detection.py`)
+- **Edge-Enhanced Detection**: Combines YOLOv11 with Canny edge detection for refined object boundaries
+- **Real-Time Speed Estimation**: Built-in YOLOv11 SpeedEstimator for vehicle speed tracking
 - **Multiple Visualization Windows**: 
-  - Original YOLOv8 detections
+  - Original YOLOv11 detections with speed overlays
   - Canny edge map visualization
   - Edge-refined detection results
 - **Mathematical Integration**: Implements edge derivative techniques from the paper
 - **Real-time Performance**: Optimized threading architecture maintains high FPS
-- **Boundary Refinement**: Uses edge contours to enhance YOLOv8 mask accuracy
+- **Boundary Refinement**: Uses edge contours to enhance YOLOv11 mask accuracy
+- **Interactive Controls**: Toggle speed estimation and calibration modes
 
 ## Mathematical Integration
 
-The hybrid implementation bridges the gap between traditional computer vision (your paper) and modern deep learning (YOLOv8):
+The hybrid implementation bridges the gap between traditional computer vision (your paper) and modern deep learning (YOLOv11):
 
 ### Edge Derivative Techniques Applied
 - **Gaussian Blur Preprocessing**: Reduces noise before edge detection (as described in the paper)
 - **Canny Edge Detection**: Implements `cv2.Canny(gray, 100, 200)` for binary edge maps
 - **Contour Extraction**: Uses `cv2.findContours()` to extract object boundaries from edge maps
-- **Boundary Refinement**: Combines YOLOv8 masks with edge contours for enhanced accuracy
+- **Boundary Refinement**: Combines YOLOv11 masks with edge contours for enhanced accuracy
 
 ### Technical Implementation
 The hybrid approach works by:
-1. Running YOLOv8 detection on each frame
+1. Running YOLOv11 detection on each frame
 2. Applying Canny edge detection with Gaussian preprocessing
 3. Finding contours within each detected object's bounding box
-4. Refining YOLOv8 masks by intersecting with strong edge regions
-5. Displaying both original and refined results for comparison
+4. Refining YOLOv11 masks by intersecting with strong edge regions
+5. Running SpeedEstimator for real-time vehicle speed tracking
+6. Displaying both original and refined results with speed overlays for comparison
 
-This demonstrates how traditional edge derivative mathematics can enhance modern deep learning approaches.
+This demonstrates how traditional edge derivative mathematics can enhance modern deep learning approaches, while adding real-time speed estimation capabilities.
 
 ## Notes
 
